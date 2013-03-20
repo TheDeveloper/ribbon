@@ -28,7 +28,7 @@ Adaptors can be found in the [lib/adaptors](lib/adaptors) folder, and each shoul
 
 
 ```javascript
-var ribbon = require('../lib/ribbon');
+var ribbon = require('ribbon');
 var mysql = ribbon.wrap('mysql', mysqlOpts);
 mysql.connect(function(err){
 	if(err){
@@ -77,5 +77,14 @@ Boolean: true if connection was previously up but is now down.
 
 #### wasDown()
 Boolean: true if connection was previously down but is now up.
+
+
+## Tests
+
+Don't forget to ```bash npm install```
+
+```bash
+make test
+```
 
 [node-mysql]: https://github.com/felixge/node-mysql

@@ -18,8 +18,10 @@
   "author": "Geoff Wagstaff",
   "license": "MIT",
   "dependencies": {
-    "should": "~1.2.2",
-    "mocha": "~1.8.2",
     "mysql": "2.0.0-alpha3"
+  },
+  "devDependencies": {
+    "should": "~1.2.2",
+    "mocha": "~1.8.2"
   }
 }

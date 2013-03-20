@@ -2,7 +2,7 @@
   "name": "ribbon",
   "version": "0.0.1",
   "description": "A lightweight service wrapper",
-  "main": "index.js",
+  "main": "lib/ribbon.js",
   "scripts": {
     "test": "make test"
   },

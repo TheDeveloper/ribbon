@@ -37,6 +37,23 @@ mysql.connect(function(err){
 	}
 	// Otherwise yay
 });
+
+// Elsewhere in your application…
+mysql.on('up', function(){
+	// Your application knows when the connection is up when this callback is invoked
+});
+
+mysql.on('down', function(){
+	// Drats, we lost connection. Disable querying until we get the 'up' event
+});
+
+if(mysql.isUp()){
+	// Should be good to query
+}
+
+if(mysql.isDown()){
+	// We should probably wait until we get the 'up' event
+}
 ```
 
 In this example, we are using the 'mysql' adaptor, which interfaces Felix Geisendörfer's [node-mysql][node-mysql] as the client.

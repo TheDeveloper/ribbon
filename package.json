@@ -1,0 +1,25 @@
+{
+  "name": "ribbon",
+  "version": "0.0.1",
+  "description": "A lightweight service wrapper",
+  "main": "index.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thedeveloper/ribbon"
+  },
+  "keywords": [
+    "node.js",
+    "connection",
+    "wrapper"
+  ],
+  "author": "Geoff Wagstaff",
+  "license": "MIT",
+  "dependencies": {
+    "should": "~1.2.2",
+    "mocha": "~1.8.2",
+    "mysql": "2.0.0-alpha3"
+  }
+}

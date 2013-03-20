@@ -51,7 +51,7 @@ var adaptor = ribbon.wrap(adaptor, adaptorOptions);
 
 ``adaptor`` is now an instance of the adaptor, which inherits the standard ribbon events and interface.
 
-## Inteface
+## Interface
 
 ### Events
 

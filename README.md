@@ -81,7 +81,7 @@ Boolean: true if connection was previously down but is now up.
 
 ## Tests
 
-Don't forget to ```bash npm install```
+Don't forget to ``npm install``
 
 ```bash
 make test

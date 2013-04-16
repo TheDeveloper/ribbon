@@ -18,7 +18,8 @@
   "author": "Geoff Wagstaff",
   "license": "MIT",
   "dependencies": {
-    "mysql": "~2.0.0-alpha7"
+    "mysql": "~2.0.0-alpha7",
+    "amqp": "~0.1.6"
   },
   "devDependencies": {
     "should": "~1.2.2",

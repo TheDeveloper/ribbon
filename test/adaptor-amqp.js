@@ -60,7 +60,11 @@ describe('AMQP adaptor', function(){
     c.shutDown(done);
   });
 
-  it('reconnects if connection severed', function(done){
+  it('restarts if connection severed', function(done){
+    var amqpOpts =  { 
+      client: { host: 'rabbitmq-1-local'},
+      autoRestart: true
+    };
     setUpConnection(amqpOpts, function(err, adaptor){
       should.not.exist(err);
       adaptor.on('revived', done);

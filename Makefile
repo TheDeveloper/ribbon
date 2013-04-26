@@ -7,12 +7,13 @@ test: test-all
 
 test-all: test-adaptors
 
-test-adaptors: test-adaptor-mysql
+test-adaptors:
+	$(call run,./test/adaptors/)
 
 test-adaptor-mysql:
-	$(call run,./test/adaptor-mysql.js)
+	$(call run,./test/adaptors/adaptor-mysql.js)
 
 test-adaptor-amqp:
-	$(call run,./test/adaptor-amqp.js)
+	$(call run,./test/adaptors/adaptor-amqp.js)
 
 .PHONY: test test-all test-adaptors

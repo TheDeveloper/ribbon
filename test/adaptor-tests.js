@@ -1,9 +1,9 @@
-var ribbon = require('../lib/ribbon'),
+var Ribbon = require('../lib/ribbon'),
     should = require('should');
 
 var setUpConnection = function(adaptorName, opts, cb){
 
-    var adaptor = ribbon.wrap(adaptorName, opts);
+    var adaptor = Ribbon.wrap(adaptorName, opts);
     adaptor.startUp(function(err){
       cb(err, adaptor);
     });
@@ -37,7 +37,7 @@ module.exports = function(adaptorName, opts){
         }
       };
 
-      var adaptor = ribbon.wrap(adaptorName, opts);
+      var adaptor = Ribbon.wrap(adaptorName, opts);
       while(i--){
         adaptor.startUp(cb);
       }

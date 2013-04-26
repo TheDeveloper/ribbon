@@ -19,7 +19,9 @@
   "license": "MIT",
   "dependencies": {
     "mysql": "~2.0.0-alpha7",
-    "amqp": "~0.1.6"
+    "amqp": "~0.1.6",
+    "redis": "~0.8.3",
+    "hiredis": "~0.1.15"
   },
   "devDependencies": {
     "should": "~1.2.2",

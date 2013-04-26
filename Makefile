@@ -13,6 +13,6 @@ test-adaptor-mysql:
 	$(call run,./test/adaptor-mysql.js)
 
 test-adaptor-amqp:
-	$(call run,./test/adaptor-amqp.js)	
+	$(call run,./test/adaptor-amqp.js)
 
 .PHONY: test test-all test-adaptors

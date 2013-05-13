@@ -64,5 +64,12 @@ module.exports = function(adaptorName, opts){
         adaptor.destroy();
       });
     });
+
+    it('fails with error if action timeout reached', function(done){
+      setUpConnection(adaptorName, { client: opts.client, actionTimeout: 1 }, function(err, adaptor){
+        err.should.equal('timeout');
+        done();
+      });
+    });
   });
 };

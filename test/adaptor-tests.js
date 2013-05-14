@@ -1,32 +1,34 @@
 var Ribbon = require('../lib/ribbon'),
     should = require('should');
 
-var setUpConnection = function(adaptorName, opts, cb){
+module.exports = function(adaptorName, adaptor, opts){
+  var ribbon;
 
-    var adaptor = Ribbon.wrap(adaptorName, opts);
-    adaptor.startUp(function(err){
-      cb(err, adaptor);
-    });
+  var newRibbon = function(adaptor, opts){
+    if(ribbon){
+      ribbon.destroy();
+    }
+    ribbon = Ribbon.wrap(adaptor, opts);
+    return ribbon;
   };
 
-module.exports = function(adaptorName, opts){
-
   describe(adaptorName+' adaptor', function(){
-    /** Starting and stopping **/
-    var c;
 
     it('invokes callback without error on successful startup', function(done){
-      setUpConnection(adaptorName, opts, function(err, adaptor){
+      var ribbon = newRibbon(adaptor, opts);
+      ribbon.startUp(function(err){
         should.not.exist(err);
-        adaptor.isUp().should.equal(true);
-        adaptor.isDown().should.equal(false);
+        ribbon.isUp().should.equal(true);
+        ribbon.isDown().should.equal(false);
         done();
-        c = adaptor;
       });
     });
 
     it('invokes callback without error when starting up while already up', function(done){
-      c.startUp(done);
+      var ribbon = newRibbon(adaptor, opts);
+      ribbon.startUp(function(){
+        ribbon.startUp(done);
+      });
     });
 
     it('invokes all callbacks successfully when multiple calls to startup are made', function(done){
@@ -37,36 +39,56 @@ module.exports = function(adaptorName, opts){
         }
       };
 
-      var adaptor = Ribbon.wrap(adaptorName, opts);
       while(i--){
-        adaptor.startUp(cb);
+        ribbon.startUp(cb);
       }
     });
 
     it('invokes callback with error on failed startup', function(done){
-      setUpConnection(adaptorName, { client: {host: 'totallywronghost'}}, function(err, adaptor){
+      var ribbon = newRibbon(adaptor, {
+        client: { host: 'totallywronghost', port: 1337 }
+      });
+      ribbon.startUp(function(err){
         should.exist(err);
-        adaptor.isUp().should.equal(false);
-        adaptor.isDown().should.equal(true);
+        ribbon.isUp().should.equal(false);
+        ribbon.isDown().should.equal(true);
         done();
       });
     });
 
     it('invokes callback without error on successful shutdown', function(done){
-      c.shutDown(done);
+      var ribbon = newRibbon(adaptor, opts);
+      ribbon.startUp(function(err){
+        should.not.exist(err);
+        ribbon.isUp().should.equal(true);
+        ribbon.shutDown(done);
+      });
     });
 
     it('restarts if connection severed', function(done){
-      opts.autoRestart = true;
-      setUpConnection(adaptorName, opts, function(err, adaptor){
+      var ribbon = newRibbon(adaptor, {
+        client: opts.client,
+        autoRestart: true,
+        restartDelay: 1,
+        maxRestartAttempts: -1
+      });
+
+      ribbon.startUp(function(err){
         should.not.exist(err);
-        adaptor.on('revived', done);
-        adaptor.destroy();
+        ribbon.on('revived', done);
+        ribbon.getClient().emit('error');
       });
     });
 
     it('fails with error if action timeout reached', function(done){
-      setUpConnection(adaptorName, { client: opts.client, actionTimeout: 1 }, function(err, adaptor){
+      var ribbon = newRibbon(adaptor, {
+        client: opts.client,
+        autoRestart: false,
+        actionTimeout: 1,
+        maxRestartAttempts: -1
+      });
+
+      ribbon.startUp(function(err){
         err.should.equal('timeout');
         done();
       });

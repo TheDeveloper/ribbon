@@ -16,4 +16,7 @@ test-adaptor-mysql:
 test-adaptor-amqp:
 	$(call run,./test/adaptors/adaptor-amqp.js)
 
+test-adaptor-redis:
+	$(call run,./test/adaptors/adaptor-redis.js)
+
 .PHONY: test test-all test-adaptors

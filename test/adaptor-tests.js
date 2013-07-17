@@ -84,7 +84,7 @@ module.exports = function(adaptorName, adaptor, opts){
       var ribbon = newRibbon(adaptor, {
         client: opts.client,
         autoRestart: false,
-        actionTimeout: 1,
+        actionTimeout: 0,
         maxRestartAttempts: -1
       });
 

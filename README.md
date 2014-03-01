@@ -1,143 +1,214 @@
 # Ribbon
-A lightweight wrapper around external services and connections to help monitor and respond to changes in availability in a consistent, predictable manner.
+Ribbon exposes a consistent and simple API for working with an object that has changeable state, i.e. the `client`.
 
-It provides a standard set of events and methods for use in your applications to react to and verify the status of external services, as an alternative to dealing with various different terminology and definitions for common state events, such as:
+The client will usually be something that holds a connection open to an external service, for example an instance of the `node-redis` client, but can be anything that emits events to reflect its internal state.
 
-* Connection up events: 'connected', 'connect', 'open', 'up', 'ready'
-* Connection closed / unavailable events: 'disconnected', 'disconnect', 'close', 'end', 'error', 'down', 'b0rked'
-
-Ribbon instead exposes a set of standard events, such as simply 'up' for connection available, and 'down' for connection unavailable.
-
-## Adaptors
-
-Ribbon includes a collection of _adaptors_ which inherit the ribbon interface. An adaptor is a controller for your underlying connection or service, known as the _client_. The adaptor is the interface between the service's client and ribbon.
-
-Adaptors can be found in the [lib/adaptors](lib/adaptors) folder.
-
----
-
-#### Currently available adaptors:
-
-* **mysql** - for [node-mysql][node-mysql]
-* **redis** - for [node-redis][node-redis]
-* **amqp** - for [node-amqp][node-amqp]
-* **mongodb** - coming soon
-
-Of course, it is possible to develop your own. See existing adaptors in [lib/adaptors](lib/adaptors) for examples and inspiration.
-
----
-
-## Usage
-
-
-```javascript
-var Ribbon = require('ribbon');
-var mysqlOpts = {
-  client: {
-    host: 'localhost'
-  }
-};
-
-var mysql = Ribbon.wrap('mysql', mysqlOpts);
-mysql.startUp(function(err){
-	if(err){
-		// Boo.. we couldn't connect
-		return false;
-	}
-	// Otherwise yay, go do some stuff
-});
-
-// Elsewhere in your application…
-mysql.on('up', function(){
-	// Your application knows when the connection is up when this callback is invoked
-});
-
-mysql.on('down', function(){
-	// Drats, we lost connection. Disable querying until we get the 'up' event
-});
-
-if(mysql.isUp()){
-	// Should be ready to query
-}
-
-if(mysql.isDown()){
-	// We should probably wait until we get the next 'up' or 'revived' event
-}
-
-mysql.restart(function(){
-  // Shut down, then start up again
-});
-
-mysql.shutDown(function(err){
-  // Stuff to do after shutdown
-});
-
-mysql.destroy(function(){
-  // Forcefully shut down
-});
-
-```
-
-In this example, we are using the 'mysql' adaptor, which interfaces Felix Geisendörfer's [node-mysql][node-mysql] as the client.
-
----
-
-When creating an instance of ribbon, you specify which adaptor to use:
-
-```javascript
-var ribbon = Ribbon.wrap(adaptor, adaptorOptions);
-```
-
-`ribbon` is now an instance of ribbon, wired up with the adaptor's methods
+Commonly, different clients will use varying terminology to describe similar concepts. Ribbon provides a standard set of events and methods your application can use to verify the status of the client and react accordingly.
 
 ## Interface
 
-### Events
+### ribbon.startUp([fn])
 
-`ribbon` is an EventEmitter, and emits the following:
+Registers `fn` as the startup function if provided. Otherwise, runs the already registered `fn`.
 
-#### 'up'
+`fn` contains the code you would write to configure, instantiate and start the client.
 
-The adaptor's client has become available for use.
+Signature:
 
-#### 'down'
+```javascript
+/**
+ * Startup function for the client
+ * @param  {object}   ribbon Ribbon core
+ * @param  {Function} cb     Invoke with cb(err, client) when startup complete
+ */
+function(ribbon, cb){}
+```
 
-The adaptor's client is unavailable due to an underlying problem, and should not be used.
+Example:
 
-#### 'revived'
+```javascript
+var redisRibbon = new Ribbon();
 
-The adaptor's client was unavailable but has now become available once again.
+redisRibbon.startUp(function(ribbon, cb){
+  var client = Redis.createClient(6379, 'localhost');
 
-#### 'dropped'
+  client.on('ready', function(){
+    cb(null, client);
+  });
+});
+```
 
-The adaptor's client has dropped out unexpectedly and is now unavailable.
+### ribbon.shutDown([fn])
 
-### Methods
+Registers `fn` as the shutdown function if provided. Otherwise, runs the already registered `fn`.
 
-#### isUp()
-Boolean: true if up, false if down.
+`fn` contains the code you would write to gracefully stop the client, such as waiting for activity to stop and then disconnecting.
 
-#### isDown()
-Boolean: true if down, false if up.
+Signature:
 
-#### wasUp()
-Boolean: true if connection was previously up but is now down.
+```javascript
+/**
+ * Shutdown function for the client
+ * @param  {object}   ribbon Ribbon core
+ * @param  {object}   client The client
+ * @param  {Function} cb     Invoke with cb(err) when shutdown complete
+ */
+function(ribbon, client, cb){}
+```
 
-#### wasDown()
-Boolean: true if connection was previously down but is now up.
+### ribbon.terminate([fn])
+
+Registers `fn` as the termination function if provided. Otherwise, runs the already registered `fn`.
+
+`fn` contains the code you would write to immediately terminate the client.
+
+Signature:
+
+```javascript
+/**
+ * Terminate function for the client
+ * @param  {object}   ribbon Ribbon core
+ * @param  {object}   client The client
+ * @param  {Function} cb     Invoke with cb(err) when terminate complete
+ */
+function(ribbon, client, cb){}
+```
+
+### ribbon.restart([fn])
+
+If called without pre-registering a function, restart runs `ribbon.shutDown` then `ribbon.startUp()`.
+
+If called with `fn`, registers `fn` as the restart function. Otherwise, runs the already registered `fn`.
+
+`fn` contains the code you would write to immediately terminate the client.
+
+Signature:
+
+```javascript
+/**
+ * Terminate function for the client
+ * @param  {object}   ribbon Ribbon core
+ * @param  {object}   client The client
+ * @param  {Function} cb     Invoke with cb(err) when restart complete
+ */
+function(ribbon, client, cb){}
+```
+
+### ribbon.isUp()
+
+Boolean: __true__ if client is available.
+
+Useful for quickly checking the status of a client before working with it. For example, you might want to make sure that the connection to your database is up and ready before sending a query.
+
+### ribbon.isDown()
+
+Inverse of `ribbon.isUp()`
+
+Boolean: __true__ if client is unavailable.
+
+### wasUp()
+Boolean: __true__ if connection was previously up but is now down.
+
+### wasDown()
+
+Inverse of `ribbon.wasUp()`
+
+Boolean: __true__ if connection was previously down but is now up.
+
+## Events
+
+Each instance of Ribbon is an event emitter.
+
+### 'up'
+
+Fires when client becomes available.
+
+### 'down'
+
+Fires when client becomes unavailable.
+
+### 'dropped'
+
+Fires when a problem with the client was detected and it becomes unintentionally unavailable.
+
+### 'revived'
+
+Fires when client recovers and is available again after dropping.
+
+## Integration example
+
+Full example with node-redis client:
+
+```javascript
+var redisOpts = {
+  retry_max_delay: 10000
+};
+
+var Ribbon = require('ribbon');
+var Redis = require('redis');
+
+var redisRibbon = new Ribbon();
+
+redisRibbon.startUp(function(ribbon, cb){
+  var client = Redis.createClient(6379, 'localhost', redisOpts);
+
+  client.on('ready', function(){
+    cb(null, client);
+  });
+
+  client.on('error', function(){
+    ribbon.declareDropped();
+    ribbon.startUp();
+  });
+
+  client.on('end', function(){
+    ribbon.declareDown();
+  });
+});
+
+redisRibbon.shutDown(function(ribbon, redis, cb){
+  redis.quit(cb);
+});
+
+redisRibbon.terminate(function(ribbon, redis, cb){
+  redis.end(cb);
+});
+
+// Elsewhere in your application…
+redisRibbon.once('up', function(){
+	// Your application knows when the client is available when this callback is invoked
+});
+
+redisRibbon.once('down', function(){
+	// Drats, we lost connection. Disable querying until we get the 'up' event
+});
+
+if(redisRibbon.isUp()){
+	// Should be ready to query
+}
+
+if(redisRibbon.isDown()){
+	// We should probably wait until we get the next 'up' event
+  ribbon.once('up', function(){
+    // Carry on as usual
+  });
+}
+
+// Call when you want to start the client
+redisRibbon.startUp();
+// Call when you want to stop the client
+redisRibbon.shutDown();
+// Call when you want to restart the client
+redisRibbon.restart();
+// Call when you want to terminate the client
+redisRibbon.terminate();
+
+```
 
 ## Tests
 
-Don't forget to ``npm install``
+Don't forget to ``npm install`` first.
 
 ```bash
 make test
 ```
-
-## What's next?
-
-At the moment, this module is a bit of a dumping ground for ribbon adaptors. The adaptors and their dependencies shouldn't be part of this repository, but instead be pluggable externally. They are in here for now for convenience and ease of use, but I intend to break them out to keep the ribbon module itself lightweight and avoid installing unnacessary baggage.
-
-[node-mysql]: https://github.com/felixge/node-mysql
-[node-redis]: https://github.com/mranney/node_redis
-[node-amqp]: https://github.com/postwait/node-amqp

@@ -1,6 +1,6 @@
 {
   "name": "ribbon",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "A lightweight service wrapper",
   "main": "lib/ribbon.js",
   "scripts": {
@@ -18,11 +18,7 @@
   "author": "Geoff Wagstaff",
   "license": "MIT",
   "dependencies": {
-    "mysql": "~2.0.0-alpha7",
-    "amqp": "~0.1.6",
-    "redis": "~0.8.3",
-    "hiredis": "~0.1.15",
-    "debug": "~0.7.2"
+    "debug": "~0.7.4"
   },
   "devDependencies": {
     "should": "~1.2.2",

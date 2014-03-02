@@ -21,7 +21,7 @@ Signature:
  * @param  {object}   ribbon Ribbon core
  * @param  {Function} cb     Invoke with cb(err, client) when startup complete
  */
-function(ribbon, cb){}
+function(ribbon, client, cb){}
 ```
 
 Example:
@@ -29,7 +29,7 @@ Example:
 ```javascript
 var redisRibbon = new Ribbon();
 
-redisRibbon.startUp(function(ribbon, cb){
+redisRibbon.startUp(function(ribbon, client, cb){
   var client = Redis.createClient(6379, 'localhost');
 
   client.on('ready', function(){

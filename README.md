@@ -262,6 +262,22 @@ Boolean: __true__ if connection was previously down but is now up.
 
 Sets ribbon's client object to `client` if given, otherwise returns ribbon's `client`.
 
+## State Interface
+
+Use these methods when you want to notify ribbon of state changes in your client.
+
+### ribbon.declareUp()
+
+Declare that the client is available.
+
+### ribbon.declareDown()
+
+Declare that the client is unavailable.
+
+### ribbon.declareDropped()
+
+Declare that the client became unavailable unexpectedly.
+
 ## Events
 
 Each instance of Ribbon is an event emitter.

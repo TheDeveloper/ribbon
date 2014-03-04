@@ -5,94 +5,237 @@ The client will usually be something that holds a connection open to an external
 
 Commonly, different clients will use varying terminology to describe similar concepts. Ribbon provides a standard set of events and methods your application can use to verify the status of the client and react accordingly.
 
-## Interface
+## Integration Interface
 
-### ribbon.startUp([fn])
+Ribbon manipulates your client by executing "actions" such as starting, stopping and restarting. Since ribbon is only a wrapper around your client, it needs a way to talk to your client so it can apply these actions as well as monitor its state.
 
-Registers `fn` as the startup function if provided. Otherwise, runs the already registered `fn`.
+Before using ribbon, you first integrate it with your client. For each action, you give ribbon a function it can execute when the action is run. This function is an interface to your client, so it will contain the code necessary to apply that action to the client.
 
-`fn` contains the code you would write to configure, instantiate and start the client.
+The actions are:
 
-Signature:
+### startUp
 
-```javascript
-/**
- * Startup function for the client
- * @param  {object}   ribbon Ribbon core
- * @param  {Function} cb     Invoke with cb(err, client) when startup complete
- */
-function(ribbon, client, cb){}
-```
+Creates and starts the client.
+
+#### ribbon.setStartUp([fn])
+
+Registers `fn` as the function to run when `ribbon.startUp()` is called.
+
+In `fn`, you instantiate and set up your client. Commonly, you will also bind event listeners on the client to notify ribbon of state changes, such as disconnects or errors.
 
 Example:
 
 ```javascript
+var Redis = require('redis');
+var Ribbon = require('Ribbon');
 var redisRibbon = new Ribbon();
 
-redisRibbon.startUp(function(ribbon, client, cb){
+/**
+ * Startup function for the client.
+ * Signature:
+ * @param  {object}   ribbon Ribbon core
+ * @param  {object}   client Client, if .startUp() has previously been called
+ * @param  {Function} cb     Invoke with cb(err, client) when startup complete
+ */
+var startRedisClient = function(ribbon, client, cb){
   var client = Redis.createClient(6379, 'localhost');
 
   client.on('ready', function(){
-    cb(null, client);
+    // we don't get an error here, because 'error' would be emitted instead if there is an issue
+    var err = null;
+    // Pass the client to ribbon when startup has completed
+    cb(err, client);
   });
+
+  // Set up event listeners for state changes so we can notify ribbon
+  client.on('error', function(){
+    ribbon.declareDropped();
+  });
+
+  client.on('end', function(){
+    ribbon.declareDown();
+  });
+};
+
+// Set startRedisClient to run when redisRibbon.startUp() is called
+redisRibbon.setStartUp(startRedisClient);
+```
+
+#### ribbon.startUp([cb])
+
+Runs the already registered `fn`.
+
+Example:
+
+```javascript
+
+redisRibbon.startUp(function(err, client){
+  if (err) {
+    // There was a problem. Handle it here - maybe a log or whatever
+    return;
+  }
+
+  // Ready to go
 });
+
 ```
 
-### ribbon.shutDown([fn])
 
-Registers `fn` as the shutdown function if provided. Otherwise, runs the already registered `fn`.
+### shutDown
 
-`fn` contains the code you would write to gracefully stop the client, such as waiting for activity to stop and then disconnecting.
+Gracefully shuts down the client.
 
-Signature:
+#### ribbon.setShutDown([fn])
+
+Registers `fn` as the function to run when `ribbon.shutDown()` is called.
+
+In `fn`, you gracefully shut down the client. This might involve stopping taking on new work, wait for current pending work to complete, and then closing down.
+
+Example:
 
 ```javascript
+var Redis = require('redis');
+var Ribbon = require('Ribbon');
+var redisRibbon = new Ribbon();
+
 /**
- * Shutdown function for the client
+ * shutDown function for the client.
+ * Signature:
  * @param  {object}   ribbon Ribbon core
- * @param  {object}   client The client
- * @param  {Function} cb     Invoke with cb(err) when shutdown complete
+ * @param  {object}   client Your client
+ * @param  {Function} cb     Invoke with cb(err) when shutDown complete
  */
-function(ribbon, client, cb){}
+var shutDownRedisClient = function(ribbon, client, cb){
+  client.quit(cb);
+};
+
+// Set startRedisClient to run when redisRibbon.shutDown() is called
+redisRibbon.setShutDown(shutDownRedisClient);
 ```
 
-### ribbon.terminate([fn])
+#### ribbon.shutDown([cb])
 
-Registers `fn` as the termination function if provided. Otherwise, runs the already registered `fn`.
+Runs the already registered `fn`.
 
-`fn` contains the code you would write to immediately terminate the client.
-
-Signature:
+Example:
 
 ```javascript
+
+redisRibbon.shutDown(function(err, client){
+  if (err) {
+    // There was a problem. Handle it here - maybe a log or whatever
+    return;
+  }
+});
+
+```
+
+### restart
+
+Restarts the client.
+
+The restart action does not require you to use `ribbon.setRestart(fn)` to assign a function to execute when `ribbon.restart()` is called. The default behaviour of `ribbon.restart()` is to run `ribbon.shutDown()` followed by `ribbon.startUp()`, but you can still set your own function in case there are special actions you must perform on the client in order to restart it.
+
+#### ribbon.setRestart([fn])
+
+Registers `fn` as the function to run when `ribbon.restart()` is called.
+
+In `fn`, you implement logic required to restart the client.
+
+Example:
+
+```javascript
+var Redis = require('redis');
+var Ribbon = require('Ribbon');
+var redisRibbon = new Ribbon();
+
 /**
- * Terminate function for the client
+ * restart function for the client.
+ * Signature:
  * @param  {object}   ribbon Ribbon core
- * @param  {object}   client The client
+ * @param  {object}   client Your client
+ * @param  {Function} cb     Invoke with cb(err, client) when restart complete
+ */
+var restartRedisClient = function(ribbon, client, cb){
+  client.quit(function(err){
+    var newClient = Redis.createClient(6379, 'localhost');
+    return cb(null, newClient);
+  });
+};
+
+// Set startRedisClient to run when redisRibbon.restart() is called
+redisRibbon.setRestart(restartRedisClient);
+```
+
+#### ribbon.restart([cb])
+
+Runs `fn` if it is registered, otherwise runs `ribbon.shutDown()` followed by `ribbon.startUp()`.
+
+Example:
+
+```javascript
+
+redisRibbon.restart(function(err){
+  if (err) {
+    // There was a problem. Handle it here - maybe a log or whatever
+    return;
+  }
+});
+
+```
+
+### terminate
+
+Kills the client.
+
+#### ribbon.setTerminate([fn])
+
+Registers `fn` as the function to run when `ribbon.terminate()` is called.
+
+In `fn`, you immediately kill the client in a destructive way. This might involve destroying underlying connections even if there is working being done.
+
+Example:
+
+```javascript
+var Redis = require('redis');
+var Ribbon = require('Ribbon');
+var redisRibbon = new Ribbon();
+
+/**
+ * terminate function for the client.
+ * Signature:
+ * @param  {object}   ribbon Ribbon core
+ * @param  {object}   client Your client
  * @param  {Function} cb     Invoke with cb(err) when terminate complete
  */
-function(ribbon, client, cb){}
+var terminateRedisClient = function(ribbon, client, cb){
+  client.quit(cb);
+};
+
+// Set startRedisClient to run when redisRibbon.terminate() is called
+redisRibbon.setTerminate(terminateRedisClient);
 ```
 
-### ribbon.restart([fn])
+#### ribbon.terminate([cb])
 
-If called without pre-registering a function, restart runs `ribbon.shutDown` then `ribbon.startUp()`.
+Runs the already registered `fn`.
 
-If called with `fn`, registers `fn` as the restart function. Otherwise, runs the already registered `fn`.
-
-`fn` contains the code you would write to immediately terminate the client.
-
-Signature:
+Example:
 
 ```javascript
-/**
- * Terminate function for the client
- * @param  {object}   ribbon Ribbon core
- * @param  {object}   client The client
- * @param  {Function} cb     Invoke with cb(err) when restart complete
- */
-function(ribbon, client, cb){}
+
+redisRibbon.terminate(function(err){
+  if (err) {
+    // There was a problem. Handle it here - maybe a log or whatever
+    return;
+  }
+});
+
 ```
+
+## Query Interface
+
+Ribbon has a bunch of convenient methods you can use to query the state of a client.
 
 ### ribbon.isUp()
 
@@ -114,6 +257,10 @@ Boolean: __true__ if connection was previously up but is now down.
 Inverse of `ribbon.wasUp()`
 
 Boolean: __true__ if connection was previously down but is now up.
+
+### client([client])
+
+Sets ribbon's client object to `client` if given, otherwise returns ribbon's `client`.
 
 ## Events
 
@@ -137,71 +284,55 @@ Fires when client recovers and is available again after dropping.
 
 ## Integration example
 
-Full example with node-redis client:
+Full example of a module that creates an instance of ribbon wrapping a redis client.
 
 ```javascript
-var redisOpts = {
-  retry_max_delay: 10000
-};
 
 var Ribbon = require('ribbon');
 var Redis = require('redis');
 
-var redisRibbon = new Ribbon();
+module.exports = function(port, host, opts){
+  var redisRibbon = new Ribbon();
+  if (typeof opts !== 'object') opts = {};
 
-redisRibbon.startUp(function(ribbon, cb){
-  var client = Redis.createClient(6379, 'localhost', redisOpts);
+  var conf = {
+    retry_max_delay: 10000
+  };
 
-  client.on('ready', function(){
-    cb(null, client);
+  for (var prop in opts) {
+    if (opts.hasOwnProperty(prop)) {
+      conf[prop] = opts[prop];
+    }
+  }
+
+  redisRibbon.setStartUp(function(ribbon, redis, cb){
+    redis = Redis.createClient(port, host, conf);
+
+    redis.on('ready', function(){
+      cb(null, redis);
+    });
+
+    redis.on('error', function(){
+      console.trace();
+      ribbon.declareDropped();
+    });
+
+    redis.on('end', function(){
+      ribbon.declareDown();
+    });
   });
 
-  client.on('error', function(){
-    ribbon.declareDropped();
-    ribbon.startUp();
+  redisRibbon.setShutDown(function(ribbon, redis, cb){
+    redis.quit(cb);
   });
 
-  client.on('end', function(){
-    ribbon.declareDown();
+  redisRibbon.setTerminate(function(ribbon, redis, cb){
+    redis.end(cb);
   });
-});
 
-redisRibbon.shutDown(function(ribbon, redis, cb){
-  redis.quit(cb);
-});
+  return redisRibbon;
+};
 
-redisRibbon.terminate(function(ribbon, redis, cb){
-  redis.end(cb);
-});
-
-// Elsewhere in your application…
-redisRibbon.once('up', function(){
-	// Your application knows when the client is available when this callback is invoked
-});
-
-redisRibbon.once('down', function(){
-	// Drats, we lost connection. Disable querying until we get the 'up' event
-});
-
-if(redisRibbon.isUp()){
-	// Should be ready to query
-}
-
-if(redisRibbon.isDown()){
-	// We should probably wait until we get the next 'up' event
-  ribbon.once('up', function(){
-    // Carry on as usual
-  });
-}
-
-// Call when you want to start the client
-redisRibbon.startUp();
-// Call when you want to stop the client
-redisRibbon.shutDown();
-// Call when you want to restart the client
-redisRibbon.restart();
-// Call when you want to terminate the client
-redisRibbon.terminate();
 
 ```
 

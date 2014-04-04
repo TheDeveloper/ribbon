@@ -23,7 +23,7 @@ module.exports = function(serverOpts, clientOpts) {
 
     amqp.once('ready', function() {
       watchEvents(amqp);
-      return cb(err, amqp);
+      return cb(null, amqp);
     });
   });
 

@@ -21,7 +21,7 @@ Creates and starts the client.
 
 Registers `fn` as the function to run when `ribbon.startUp()` is called.
 
-In `fn`, you instantiate and set up your client. Commonly, you will also bind event listeners on the client to notify ribbon of state changes, such as disconnects or errors.
+In `fn`, you instantiate and set up your client. Commonly, you will also bind event listeners on the client to notify ribbon of state changes, such as disconnects.
 
 Example:
 
@@ -45,11 +45,6 @@ var startRedisClient = function(ribbon, client, cb){
     var err = null;
     // Pass the client to ribbon when startup has completed
     cb(err, client);
-  });
-
-  // Set up event listeners for state changes so we can notify ribbon
-  client.on('error', function(){
-    ribbon.declareDropped();
   });
 
   client.on('end', function(){
@@ -298,59 +293,9 @@ Fires when a problem with the client was detected and it becomes unintentionally
 
 Fires when client recovers and is available again after dropping.
 
-## Integration example
+## Integration examples
 
-Full example of a module that creates an instance of ribbon wrapping a redis client.
-
-```javascript
-
-var Ribbon = require('ribbon');
-var Redis = require('redis');
-
-module.exports = function(port, host, opts){
-  var redisRibbon = new Ribbon();
-  if (typeof opts !== 'object') opts = {};
-
-  var conf = {
-    retry_max_delay: 10000
-  };
-
-  for (var prop in opts) {
-    if (opts.hasOwnProperty(prop)) {
-      conf[prop] = opts[prop];
-    }
-  }
-
-  redisRibbon.setStartUp(function(ribbon, redis, cb){
-    redis = Redis.createClient(port, host, conf);
-
-    redis.on('ready', function(){
-      cb(null, redis);
-    });
-
-    redis.on('error', function(){
-      console.trace();
-      ribbon.declareDropped();
-    });
-
-    redis.on('end', function(){
-      ribbon.declareDown();
-    });
-  });
-
-  redisRibbon.setShutDown(function(ribbon, redis, cb){
-    redis.quit(cb);
-  });
-
-  redisRibbon.setTerminate(function(ribbon, redis, cb){
-    redis.end(cb);
-  });
-
-  return redisRibbon;
-};
-
-
-```
+Check out the [integration examples](integrations/). You might find an integration already written for your module, or get inspiration for writing your own if not.
 
 ## Tests
 

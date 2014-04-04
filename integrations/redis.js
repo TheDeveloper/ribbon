@@ -1,3 +1,7 @@
+/**
+ * Example adaptor for node redis client: https://github.com/mranney/node_redis
+ */
+
 var Ribbon = require('../lib/ribbon');
 var Redis = require('redis');
 

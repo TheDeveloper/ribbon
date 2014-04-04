@@ -19,9 +19,9 @@ module.exports = function(serverOpts, clientOpts) {
   };
 
   amqpRibbon.setStartUp(function(ribbon, amqp, cb) {
-    amqp = AMQP.createConnection(serverOpts, clientOpts);
+    AMQP.createConnection(serverOpts, clientOpts, function(amqp) {
+      if (typeof amqp !== 'object') return cb('connection problem');
 
-    amqp.once('ready', function() {
       watchEvents(amqp);
       return cb(null, amqp);
     });

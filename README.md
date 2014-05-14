@@ -5,6 +5,10 @@ The client will usually be something that holds a connection open to an external
 
 Commonly, different clients will use varying terminology to describe similar concepts. Ribbon provides a standard set of events and methods your application can use to verify the status of the client and react accordingly.
 
+### Install
+
+    npm install ribbon
+
 ## Integration Interface
 
 Ribbon manipulates your client by executing "actions" such as starting, stopping and restarting. Since ribbon is only a wrapper around your client, it needs a way to talk to your client so it can apply these actions as well as monitor its state.

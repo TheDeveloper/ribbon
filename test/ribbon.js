@@ -71,6 +71,7 @@ describe('Ribbon', function(){
 
   describe('client dropping', function () {
     it('client declares drop', function(done){
+      ribbon.changeState(false);
       ribbon.declareDropped();
       done();
     });
